@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>myWallet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- TEMEL AYARLAR --- */
+        :root {
+            --bg-body: #000000; --bg-card: #121212; --text-main: #e2e8f0; --text-muted: #94a3b8;
+            --border: #27272a; --primary: #ffffff; --primary-text: #000000; --input-bg: #18181b;
+            --accent: #2563eb; --danger: #dc2626; --success: #16a34a; --warning: #f59e0b;
+        }
+
+        [data-theme="light"] {
+            --bg-body: #f1f5f9; --bg-card: #ffffff; --text-main: #334155; --text-muted: #64748b;
+            --border: #e2e8f0; --primary: #000000; --primary-text: #ffffff; --input-bg: #f8fafc;
+        }
+
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; -webkit-user-select: none; user-select: none; }
+        body { margin: 0; padding: 0; background: var(--bg-body); color: var(--text-main); padding-bottom: 90px; overflow-x: hidden; }
+
+        /* GİZLEME SINIFI */
+        .d-none { display: none !important; }
+
+        /* GİRİŞ EKRANI (TAM KAPLAMA) */
+        #auth-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-body); z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 20px; overflow-y: auto;
+        }
+
+        .container { max-width: 650px; margin: 0 auto; padding: 20px; }
+        .card { background: var(--bg-card); border-radius: 16px; padding: 20px; border: 1px solid var(--border); margin-bottom: 15px; }
+        
+        /* FORM */
+        input, select { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; background: var(--input-bg); font-size: 1rem; color: var(--text-main); outline: none; -webkit-user-select: text; user-select: text; }
+        input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+        button { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: var(--primary-text); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: black; }
+        .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+        
+        /* Disabled Button (Spam Koruması İçin) */
+        button:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
+
+        /* MİNİK BUTONLAR */
+        .btn-icon-sm { 
+            background: transparent; border: 1px solid var(--border); color: var(--text-muted); 
+            width: 32px; height: 32px; border-radius: 8px; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; font-size: 1rem;
+        }
+        .btn-icon-sm:hover { background: var(--input-bg); border-color: var(--primary); color: var(--primary); }
+
+        /* ALT MENÜ */
+        .bottom-nav { 
+            position: fixed; bottom: 0; left: 0; width: 100%; background: var(--bg-card); 
+            display: flex; justify-content: space-around; padding: 12px 0; 
+            border-top: 1px solid var(--border); z-index: 1000; 
+        }
+        .nav-item { text-align: center; color: var(--text-muted); cursor: pointer; flex: 1; }
+        .nav-item.active { color: var(--primary); font-weight: 700; }
+        .nav-icon { font-size: 1.4rem; display: block; margin-bottom: 2px; }
+
+        /* MODAL */
+        .modal-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); z-index: 6000; 
+            display: none; justify-content: center; align-items: flex-end; 
+        }
+        .modal-content { 
+            background: var(--bg-card); width: 100%; max-width: 600px; 
+            border-radius: 24px 24px 0 0; padding: 30px 20px; 
+            border-top: 1px solid var(--border); max-height: 90vh; overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        /* KART TASARIMLARI */
+        .card-carousel { 
+            display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px; 
+            cursor: grab; scrollbar-width: none; 
+        }
+        .card-carousel::-webkit-scrollbar { display: none; }
+        .card-carousel:active { cursor: grabbing; }
+
+        .credit-card { 
+            flex: 0 0 340px; height: 220px; border-radius: 16px; padding: 20px; color: white; 
+            display: flex; flex-direction: column; justify-content: space-between; position: relative; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .credit-card * { pointer-events: none; } 
+        .credit-card button, .credit-card .card-number, .credit-card .card-iban { pointer-events: auto; }
+
+        /* BANKA RENKLERİ */
+        .bg-ziraat { background: linear-gradient(135deg, #e30a17, #5c0006); }
+        .bg-garanti { background: linear-gradient(135deg, #22ba48, #004d1a); }
+        .bg-isbank { background: linear-gradient(135deg, #1e3a8a, #0f172a); }
+        .bg-akbank { background: linear-gradient(135deg, #ef4444, #7f1d1d); }
+        .bg-yapikredi { background: linear-gradient(135deg, #3b82f6, #1e3a8a); }
+        .bg-halkbank { background: linear-gradient(135deg, #0ea5e9, #0369a1); }
+        .bg-vakif { background: linear-gradient(135deg, #eab308, #713f12); }
+        .bg-finans { background: linear-gradient(135deg, #38bdf8, #075985); }
+        .bg-deniz { background: linear-gradient(135deg, #06b6d4, #164e63); }
+        .bg-enpara { background: linear-gradient(135deg, #a855f7, #581c87); }
+        .bg-papara { background: linear-gradient(135deg, #1f2937, #000000); }
+        .bg-tosla { background: linear-gradient(135deg, #14b8a6, #134e4a); }
+        .bg-kuveyt { background: linear-gradient(135deg, #bfa058, #0f5e35); }
+        .bg-teb { background: linear-gradient(135deg, #009747, #5c6670); }
+        .bg-ing { background: linear-gradient(135deg, #ff6200, #ff3e00); }
+        .bg-tf { background: linear-gradient(135deg, #ed1c24, #122542); }
+        .bg-ptt { background: linear-gradient(135deg, #facc15, #1e3a8a); color: #1e3a8a !important; }
+        .bg-other { background: linear-gradient(135deg, #64748b, #1e293b); }
+        
+        .card-logo-img { height: 40px; width: 40px; object-fit: contain; background: white; border-radius: 50%; padding: 3px; opacity: 1; }
+        .bg-ptt .card-logo-img { filter: none; }
+        .card-number { font-family: 'Share Tech Mono', monospace; font-size: 1.4rem; letter-spacing: 2px; cursor: pointer; margin-top: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .card-iban { font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; opacity: 0.9; margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 5px; cursor: pointer; }
+
+        /* LİSTE TASARIMI */
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .list-left { display: flex; align-items: center; gap: 12px; }
+        .list-icon { width: 40px; height: 40px; background: var(--input-bg); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .list-img { width: 40px; height: 40px; object-fit: contain; border-radius: 50%; background: white; padding: 2px; }
+
+        /* SPLIT BALANCE */
+        .balance-split { display: flex; gap: 10px; margin-bottom: 15px; }
+        .bal-box { flex: 1; padding: 15px; border-radius: 16px; text-align: center; color: white; }
+        .bal-liquid { background: linear-gradient(135deg, #10b981, #059669); }
+        .bal-credit { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+
+        #toast-box { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; display: none; z-index: 10000; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        #loading-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:100001; display:none; justify-content:center; align-items:center; color:white; flex-direction: column;}
+        .spinner { border: 3px solid #333; border-top: 3px solid #fff; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .btn-icon-only { width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.2); color: white; border: none; backdrop-filter: blur(5px); position: absolute; top: 15px; right: 15px; cursor: pointer;}
+        
+        /* SWITCH */
+        .switch-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(24px); }
+    </style>
+</head>
+<body>
+
+    <div id="toast-box">Bildirim</div>
+    <div id="loading-overlay"><div class="spinner"></div><div>Yükleniyor...</div></div>
+
+    <div id="auth-screen">
+        <div class="card" style="text-align:center; max-width:400px; width:100%;">
+            <h1>myWallet</h1>
+            <p style="color:var(--text-muted); margin-bottom:20px;">Güvenli Finans Yönetimi</p>
+            
+            <div id="login-form">
+                <form autocomplete="off" onsubmit="event.preventDefault(); handleLogin();">
+                    <input style="opacity: 0; position: absolute; width: 0; height: 0;" type="text">
+                    <input style="opacity: 0; position: absolute; width: 0; height: 0;" type="password">
+                    
+                    <input type="text" id="username" placeholder="Kullanıcı Adı" autocomplete="off">
+                    <input type="password" id="password" placeholder="Şifre" autocomplete="new-password">
+                    <button type="submit" id="btnLogin" class="btn-primary">Giriş Yap</button>
+                </form>
+                <p style="margin-top:20px; cursor:pointer; color:var(--accent);" onclick="toggleAuth('register')">Hesap Oluştur</p>
+            </div>
+
+            <div id="register-form" class="d-none">
+                <form autocomplete="off" onsubmit="event.preventDefault(); handleRegister();">
+                    <input type="text" id="regUser" placeholder="Kullanıcı Adı" autocomplete="off">
+                    <input type="email" id="regMail" placeholder="E-Posta" autocomplete="off">
+                    <input type="password" id="regPass" placeholder="Şifre (Min 8, Büyük/Küçük Harf)" autocomplete="new-password">
+                    <input type="number" id="regYear" placeholder="Doğum Yılı">
+                    <div style="text-align:left; margin-bottom:15px; font-size:0.8rem; color:var(--text-muted);">
+                        <input type="checkbox" id="regTerms"> <label>Kullanıcı sözleşmesini okudum.</label>
+                    </div>
+                    <button type="submit" id="btnReg" class="btn-primary" style="background:var(--success);">Kayıt Ol</button>
+                </form>
+                <p style="text-align:center; margin-top:20px; color:var(--text-muted); cursor:pointer;" onclick="toggleAuth('login')">Giriş'e Dön</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-screen" class="d-none">
+        
+        <div id="tab-home" class="container">
+            <div class="balance-split">
+                <div class="bal-box bal-liquid">
+                    <div style="font-size:0.7rem; opacity:0.9;">NAKİT VARLIK</div>
+                    <div id="liquid-balance" style="font-size:1.4rem; font-weight:800;">0 ₺</div>
+                </div>
+                <div class="bal-box bal-credit">
+                    <div style="font-size:0.7rem; opacity:0.9;">KREDİ LİMİTİ</div>
+                    <div id="credit-balance" style="font-size:1.4rem; font-weight:800;">0 ₺</div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+                <button onclick="openModal('modal-add-txn')" class="btn-primary">💸 Ekle</button>
+                <button onclick="showStats()" class="btn-ghost">📊 Analiz</button>
+            </div>
+
+            <div class="card"><h3>Kategori Analizi</h3><div style="height:200px;"><canvas id="myChart"></canvas></div></div>
+            <div class="card"><h3>Son Hareketler</h3><div id="recent-txns"></div></div>
+        </div>
+
+        <div id="tab-wallet" class="container d-none">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2>Kartlarım</h2>
+                <button onclick="openModal('modal-add-acc')" class="btn-primary" style="width:auto; padding:8px 15px;">+ Ekle</button>
+            </div>
+            
+            <div id="card-carousel" class="card-carousel"></div>
+
+            <h3 style="margin-top:20px;">Hesap Listesi</h3>
+            <div class="card" style="padding:10px;" id="accounts-list"></div>
+        </div>
+
+        <div id="tab-history" class="container d-none">
+            <h2>Harcamalar</h2>
+            <div class="card" style="padding:10px;" id="full-history-list"></div>
+        </div>
+
+        <div id="tab-profile" class="container d-none">
+            <h2>Profil</h2>
+            <div class="card">
+                <div class="list-item"><span>Kullanıcı</span><strong id="display-username"></strong></div>
+                <div class="list-item" onclick="toggleTheme()" style="cursor:pointer;"><span>Koyu Mod</span><span>🌓</span></div>
+                <div class="list-item" onclick="openModal('modal-settings')" style="cursor:pointer;"><span>Güvenlik</span><span>></span></div>
+            </div>
+            <div id="admin-panel-btn" class="card d-none" onclick="openModal('modal-admin')" style="border-color:#facc15; cursor:pointer; text-align:center; color:#facc15;">🛡️ Yönetici Paneli</div>
+            <button onclick="location.reload()" class="btn-danger">Çıkış Yap</button>
+        </div>
+
+        <nav id="bottom-nav" class="bottom-nav d-none">
+            <div class="nav-item active" onclick="switchTab('home')"><span class="nav-icon">🏠</span><div style="font-size:10px">Ana Sayfa</div></div>
+            <div class="nav-item" onclick="switchTab('wallet')"><span class="nav-icon">💳</span><div style="font-size:10px">Cüzdan</div></div>
+            <div class="nav-item" onclick="switchTab('history')"><span class="nav-icon">📝</span><div style="font-size:10px">Harcamalar</div></div>
+            <div class="nav-item" onclick="switchTab('profile')"><span class="nav-icon">👤</span><div style="font-size:10px">Profil</div></div>
+        </nav>
+    </div>
+
+    <div id="modal-add-txn" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'">
+        <div class="modal-content">
+            <h3>İşlem Ekle</h3>
+            <label>Hesap Seç</label>
+            <select id="txnAccount"></select>
+            <div style="display:flex; gap:10px;">
+                <select id="txnType" style="flex:1;"><option value="expense">Gider</option><option value="income">Gelir</option></select>
+                <select id="txnCategory" style="flex:1;">
+                    <option value="market">🛒 Market</option>
+                    <option value="fatura">📄 Fatura</option>
+                    <option value="ulasim">⛽ Ulaşım</option>
+                    <option value="yemek">🍔 Yemek</option>
+                    <option value="eglence">🍿 Eğlence</option>
+                    <option value="giyim">👕 Giyim</option>
+                    <option value="saglik">💊 Sağlık</option>
+                    <option value="maas">💰 Maaş</option>
+                    <option value="diger">📦 Diğer</option>
+                </select>
+            </div>
+            <input type="number" id="txnAmount" placeholder="Tutar (TL)">
+            <input type="text" id="txnDesc" placeholder="Açıklama">
+            <input type="date" id="txnDate">
+            <button onclick="addTxn()" id="btn-save-txn" class="btn-primary">Kaydet</button>
+        </div>
+    </div>
+
+    <div id="modal-add-acc" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'">
+        <div class="modal-content">
+            <h3>Kart Ekle</h3>
+            <label>Tür</label>
+            <select id="accType" onchange="updateAccLabels()">
+                <option value="bank">Vadesiz Hesap</option>
+                <option value="credit">Kredi Kartı</option>
+                <option value="wallet">Cüzdan</option>
+            </select>
+            <label>Banka</label>
+            <select id="bankSelect" onchange="checkCustomBank()"></select>
+            <div id="customBankDiv" class="d-none"><input type="text" id="customBankName" placeholder="Özel İsim"></div>
+            <label id="lbl-bal">Bakiye</label><input type="number" id="accBalance" placeholder="Tutar">
+            <div id="credit-extra" class="d-none"><label>Kesim Günü</label><input type="number" id="accCutoff" placeholder="15"></div>
+            <div id="bank-extra"><label>IBAN</label><input type="text" id="accIban" placeholder="TR..." oninput="formatIBAN(this)"></div>
+            <button onclick="addAccount()" id="btn-save-acc" class="btn-primary" style="margin-top:15px;">Kaydet</button>
+        </div>
+    </div>
+
+    <div id="modal-card-details" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'">
+        <div class="modal-content">
+            <h3>Kart Bilgileri</h3>
+            <input type="hidden" id="detailAccId">
+            <label>Kart No</label><input type="text" id="realCardNum" maxlength="19" oninput="formatCardNumber(this)">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;"><label>SKT</label><input type="text" id="realCardDate" placeholder="MM/YY" oninput="formatDate(this)"></div>
+                <div style="flex:1;"><label>CVV</label><input type="text" id="realCardCvv" maxlength="3"></div>
+            </div>
+            <button onclick="saveCardDetails()" class="btn-primary">Kaydet</button>
+        </div>
+    </div>
+
+    <div id="modal-edit-acc" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'">
+        <div class="modal-content"><h3>Bakiye Güncelle</h3><input type="hidden" id="editAccId"><input type="number" id="editAccBalance"><button onclick="saveEditedAccount()" class="btn-primary">Güncelle</button></div>
+    </div>
+
+    <div id="modal-settings" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'">
+        <div class="modal-content"><h3>Güvenlik</h3><input type="password" id="newPass" placeholder="Yeni Şifre"><button onclick="changePassword()" class="btn-primary">Şifre Değiştir</button><hr><input type="text" id="newUsername" placeholder="Yeni Kullanıcı Adı"><button onclick="changeUsername()" class="btn-warning">Adımı Değiştir</button></div>
+    </div>
+
+    <div id="modal-stats" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'">
+        <div class="modal-content"><h3>Analiz</h3><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; text-align:center;"><div style="background:var(--input-bg); padding:10px; border-radius:10px;">Günlük<br><b id="stat-d">0</b></div><div style="background:var(--input-bg); padding:10px; border-radius:10px;">Aylık<br><b id="stat-m">0</b></div></div></div>
+    </div>
+
+    <div id="modal-admin" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'"><div class="modal-content"><h3>Yönetici</h3><button onclick="refreshAdmin()" class="btn-ghost">Yenile</button><div id="admin-list" style="margin-top:10px; max-height:300px; overflow-y:auto;"></div></div></div>
+
+    <div id="modal-confirm" class="modal-overlay" style="z-index: 7000;" onclick="if(event.target==this)this.style.display='none'">
+        <div class="modal-content">
+            <h3>Onaylıyor musunuz?</h3>
+            <p id="confirm-msg" style="color:var(--text-muted); margin-bottom:20px;">İşlem geri alınamaz.</p>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-ghost" onclick="document.getElementById('modal-confirm').style.display='none'">İptal</button>
+                <button class="btn-danger" onclick="handleConfirmYes()">Evet</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // ANTI-SPAM & RATE LIMITER
+    let lastClick = 0;
+    function checkSpam() {
+        const now = Date.now();
+        if (now - lastClick < 1000) { showToast("Çok hızlı işlem yapıyorsunuz!", "error"); return true; }
+        lastClick = now;
+        return false;
+    }
+
+    // FIREBASE
+    const firebaseConfig = { apiKey: "AIzaSyCyg7GkKeGBNoCFaGa5jN6ZxpbyWUkxIBg", authDomain: "mywallet-b69d2.firebaseapp.com", projectId: "mywallet-b69d2", storageBucket: "mywallet-b69d2.firebasestorage.app", messagingSenderId: "428186525360", appId: "1:428186525360:web:d37c2c495eda56f91ca575", measurementId: "G-G3XEELDBGZ" };
+    let db, currentUser, userData, confirmAction;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        try { 
+            firebase.initializeApp(firebaseConfig); 
+            db = firebase.firestore(); 
+            initBankSelect(); 
+            
+            const slider = document.getElementById('card-carousel');
+            let isDown = false, startX, scrollLeft;
+            slider.addEventListener('dragstart', (e) => e.preventDefault());
+            slider.addEventListener('mousedown', (e) => { isDown = true; startX = e.pageX - slider.offsetLeft; scrollLeft = slider.scrollLeft; });
+            slider.addEventListener('mouseleave', () => { isDown = false; });
+            slider.addEventListener('mouseup', () => { isDown = false; });
+            slider.addEventListener('mousemove', (e) => { if(!isDown) return; e.preventDefault(); const x = e.pageX - slider.offsetLeft; const walk = (x - startX) * 3; slider.scrollLeft = scrollLeft - walk; });
+        } catch(e) { console.log("Hata: " + e.message); }
+    });
+
+    // DATA
+    const bankList = [
+        {code:"ziraat",name:"Ziraat",color:"bg-ziraat",dom:"ziraatbank.com.tr"}, {code:"isbank",name:"İş Bankası",color:"bg-isbank",dom:"isbank.com.tr"},
+        {code:"garanti",name:"Garanti",color:"bg-garanti",dom:"garantibbva.com.tr"}, {code:"akbank",name:"Akbank",color:"bg-akbank",dom:"akbank.com"},
+        {code:"yapikredi",name:"Yapı Kredi",color:"bg-yapikredi",dom:"yapikredi.com.tr"}, {code:"enpara",name:"Enpara",color:"bg-enpara",dom:"enpara.com"},
+        {code:"papara",name:"Papara",color:"bg-papara",dom:"papara.com"}, {code:"kuveyt",name:"Kuveyt Türk",color:"bg-kuveyt",dom:"kuveytturk.com.tr"},
+        {code:"teb",name:"TEB",color:"bg-teb",dom:"teb.com.tr"}, {code:"ing",name:"ING",color:"bg-ing",dom:"ing.com.tr"},
+        {code:"finans",name:"QNB",color:"bg-finans",dom:"qnb.com.tr"}, {code:"vakif",name:"VakıfBank",color:"bg-vakif",dom:"vakifbank.com.tr"},
+        {code:"tf",name:"Türkiye Finans",color:"bg-tf",dom:"turkiyefinans.com.tr"}, {code:"ptt",name:"PTT",color:"bg-ptt",dom:"ptt.gov.tr"},
+        {code:"other",name:"Diğer",color:"bg-other",dom:"wallet"}
+    ];
+    const catIcons = { market: "🛒", fatura: "📄", ulasim: "⛽", yemek: "🍔", diger: "📦" };
+    function getLogo(dom) { 
+        if(dom==='wallet') return "https://cdn-icons-png.flaticon.com/512/60/60484.png"; 
+        return `https://www.google.com/s2/favicons?domain=${dom}&sz=128`; 
+    }
+    
+    function showToast(m,t) { const b=document.getElementById('toast-box'); b.innerText=m; b.style.background=t==='error'?'#dc2626':'#16a34a'; b.style.display='block'; setTimeout(()=>b.style.display='none',3000); }
+    function showLoading(){document.getElementById('loading-overlay').style.display='flex';} function hideLoading(){document.getElementById('loading-overlay').style.display='none';}
+
+    function toggleAuth(t) { document.getElementById('login-form').classList.toggle('d-none', t!=='login'); document.getElementById('register-form').classList.toggle('d-none', t!=='register'); }
+    function switchTab(t) {
+        ['home','wallet','history','profile'].forEach(id => document.getElementById('tab-'+id).classList.add('d-none'));
+        document.getElementById('tab-'+t).classList.remove('d-none');
+        document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active')); 
+    }
+    function openModal(id) { 
+        document.getElementById(id).style.display='flex'; 
+        if(id==='modal-add-acc') { initBankSelect(); updateAccLabels(); }
+        if(id==='modal-add-txn') document.getElementById('txnDate').valueAsDate = new Date(); 
+    }
+    function closeModal(e, id) { if(e.target.id === id) document.getElementById(id).style.display='none'; }
+    function showRegister() { document.getElementById('login-form').classList.add('d-none'); document.getElementById('register-form').classList.remove('d-none'); }
+    function showLogin() { document.getElementById('register-form').classList.add('d-none'); document.getElementById('login-form').classList.remove('d-none'); }
+    
+    function formatCardNumber(i) { let v=i.value.replace(/\D/g,'').substring(0,16); i.value=v.match(/.{1,4}/g)?.join(' ')||v; }
+    function formatDate(i) { let v=i.value.replace(/\D/g,''); if(v.length>2) v=v.substring(0,2)+'/'+v.substring(2,4); i.value=v; }
+    function formatIBAN(i) { let v=i.value.toUpperCase(); if(!v.startsWith('TR')) v='TR'+v.replace(/[^0-9]/g,''); else v='TR'+v.substring(2).replace(/[^0-9]/g,''); i.value=v.match(/.{1,4}/g)?.join(' ')||v; }
+    function copyText(t) { if(!t) return; navigator.clipboard.writeText(t).then(()=>showToast("Kopyalandı","success")); }
+    function checkPwd(p) { return p.length>=6; }
+    function toggleTheme() { if(document.body.getAttribute('data-theme')==='light') document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme','light'); }
+
+    // CONFIRM
+    function openConfirm(msg, cb) {
+        document.getElementById('confirm-msg').innerText = msg;
+        confirmAction = cb;
+        document.getElementById('modal-confirm').style.display = 'flex';
+    }
+    function handleConfirmYes() {
+        if(confirmAction) confirmAction();
+        document.getElementById('modal-confirm').style.display = 'none';
+    }
+
+    // AUTH
+    function handleLogin() {
+        if(checkSpam()) return;
+        const u=document.getElementById('username').value.trim(), p=document.getElementById('password').value.trim();
+        if(!u||!p) return showToast("Bilgileri girin","error");
+        showLoading();
+        db.collection("users").doc(u).get().then(doc=>{
+            hideLoading();
+            if(doc.exists && doc.data().password===p) {
+                currentUser=u; userData=doc.data();
+                if(!userData.transactions) userData.transactions=[]; if(!userData.accounts) userData.accounts=[];
+                startApp();
+            } else showToast("Hatalı giriş","error");
+        }).catch(e=>{hideLoading();showToast("Hata","error")});
+    }
+    function handleRegister() {
+        if(checkSpam()) return;
+        const u=document.getElementById('regUser').value.trim(), p=document.getElementById('regPass').value.trim();
+        if(u.length<3 || p.length<6) return showToast("Hatalı bilgi","error");
+        showLoading();
+        db.collection("users").doc(u).get().then(doc=>{
+            if(doc.exists) { hideLoading(); showToast("Kullanıcı adı dolu","error"); }
+            else db.collection("users").doc(u).set({password:p, role:'user', transactions:[], accounts:[]}).then(()=>{hideLoading(); showToast("Kayıt Başarılı!","success"); toggleAuth('login');});
+        });
+    }
+    function startApp() {
+        document.getElementById('auth-screen').classList.add('d-none');
+        document.getElementById('app-screen').classList.remove('d-none');
+        document.getElementById('bottom-nav').classList.remove('d-none');
+        document.getElementById('display-username').innerText=currentUser;
+        if(userData.role==='admin'||currentUser==='admin') document.getElementById('admin-panel-btn').classList.remove('d-none');
+        renderUI();
+    }
+
+    function initBankSelect() { 
+        const sel = document.getElementById('bankSelect'); sel.innerHTML="";
+        const def = document.createElement('option'); def.text="Banka Seçiniz"; def.value=""; def.selected=true; def.disabled=true; sel.add(def);
+        bankList.forEach(b => { let o = document.createElement('option'); o.value=b.code; o.text=b.name; s.add(o); });
+    }
+    function updateAccLabels() { 
+        const t = document.getElementById('accType').value; 
+        document.getElementById('lbl-bal').innerText = t==='credit' ? 'Limit' : 'Bakiye';
+        document.getElementById('credit-extra').className = t==='credit' ? '' : 'd-none';
+        document.getElementById('bank-extra').className = t==='bank' ? '' : 'd-none';
+    }
+    function checkCustomBank() { document.getElementById('customBankDiv').className = document.getElementById('bankSelect').value==='other'?'':'d-none'; }
+
+    function addAccount() {
+        if(checkSpam()) return;
+        const bc = document.getElementById('bankSelect').value;
+        if(!bc) return showToast("Banka seçin","error");
+        let name = bc==='other' ? document.getElementById('customBankName').value : bankList.find(b=>b.code===bc).name;
+        const bal = parseFloat(document.getElementById('accBalance').value);
+        if(isNaN(bal)) return showToast("Bakiye girin","error");
+        
+        userData.accounts.push({
+            id:Date.now(), name, type:document.getElementById('accType').value, balance:bal, bankCode:bc,
+            iban:document.getElementById('accIban').value, cutoff:document.getElementById('accCutoff').value
+        });
+        saveData("Hesap Eklendi"); document.getElementById('modal-add-acc').style.display='none';
+    }
+
+    function renderUI() {
+        let liq=0, cred=0;
+        const al=document.getElementById('accounts-list'), ts=document.getElementById('txnAccount'), cc=document.getElementById('card-carousel'), rt=document.getElementById('recent-txns'), fh=document.getElementById('full-history-list');
+        al.innerHTML=""; ts.innerHTML=""; cc.innerHTML=""; rt.innerHTML=""; fh.innerHTML="";
+
+        userData.accounts.forEach(acc => {
+            let bal = Number(acc.balance); if(isNaN(bal)) bal=0;
+            if(acc.type==='credit') cred+=bal; else liq+=bal;
+            
+            let bank = bankList.find(b=>b.code===acc.bankCode);
+            let logo = bank ? getLogo(bank.dom) : getLogo('wallet');
+            let color = bank ? bank.color : 'bg-other';
+            let typeTxt = acc.type==='credit' ? "Kredi Kartı" : (acc.type==='bank' ? "Vadesiz Hesap" : "Cüzdan");
+
+            // Kart
+            let num = acc.realCardNumber ? acc.realCardNumber : "**** **** **** " + Math.floor(1000+Math.random()*9000);
+            let ibanTxt = (acc.type==='bank' && acc.iban) ? `<div class="card-iban" ondblclick="copyText('${acc.iban}')">${acc.iban}</div>` : '';
+            let imgTag = `<img src="${logo}" class="card-logo-img" onerror="this.style.display='none'">`;
+
+            cc.innerHTML += `<div class="credit-card ${color}"><div class="card-top">${imgTag}<span style="font-size:24px;"></span></div><div class="card-middle"><div style="width:35px;height:25px;background:#fbbf24;border-radius:5px;"></div><div style="margin-top:10px;"><div class="card-number" ondblclick="copyText('${acc.realCardNumber}')">${num}</div>${ibanTxt}</div></div><div class="card-bottom"><div><div style="font-size:0.7rem;">${typeTxt}</div></div><div class="card-balance">${bal} ₺</div></div><button class="btn-icon-only" style="position:absolute;top:15px;right:15px;color:white;" onclick="openCardSettings(${acc.id})">⚙️</button></div>`;
+            
+            al.innerHTML += `<div class="list-item"><div class="list-left"><img src="${logo}" class="list-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2830/2830284.png'"><div><b>${acc.name}</b><br><small>${typeTxt}</small></div></div><div><b>${bal} ₺</b> <div style="display:flex;gap:5px;margin-top:5px;"><button class="btn-icon-sm" style="color:#f59e0b; border-color:#f59e0b;" onclick="editAccount(${acc.id})">✎</button> <button class="btn-icon-sm" style="color:#dc2626; border-color:#dc2626;" onclick="delAcc(${acc.id})">🗑️</button></div></div></div>`;
+            
+            let opt = document.createElement('option'); opt.value=acc.id; opt.innerText=`${acc.name} (${typeTxt})`; ts.appendChild(opt);
+        });
+
+        document.getElementById('liquid-balance').innerText = liq + " ₺";
+        document.getElementById('credit-balance').innerText = cred + " ₺";
+
+        userData.transactions.forEach((t,i) => {
+            let acc = userData.accounts.find(a=>a.id===t.accId);
+            let accName = acc ? acc.name : 'Silinmiş';
+            let accTypeTxt = "";
+            if(acc) {
+                if(acc.type === 'credit') accTypeTxt = "(Kredi Kartı)";
+                else if(acc.type === 'bank') accTypeTxt = "(Vadesiz)";
+                else accTypeTxt = "(Cüzdan)";
+            }
+            
+            let html = `<div class="list-item"><div class="list-left"><div><b>${t.desc}</b><br><small>${t.date} • ${accName} ${accTypeTxt}</small></div></div><div><b style="color:${t.type==='income'?'#16a34a':'#dc2626'}">${t.amount} ₺</b> <button class="btn-icon-sm" style="border:none; color:#dc2626; margin-left:5px;" onclick="delTxn(${t.id})">🗑️</button></div></div>`;
+            fh.innerHTML += html; if(i<5) rt.innerHTML += html;
+        });
+        renderChart();
+    }
+
+    function deleteTransaction(id) {
+        if(!confirm("Bu harcamayı silmek ve tutarı iade etmek istiyor musunuz?")) return;
+        let txnIndex = -1;
+        if (id) { txnIndex = userData.transactions.findIndex(t => t.id === id); }
+        if (txnIndex === -1) return showToast("İşlem bulunamadı.", "error");
+        const txn = userData.transactions[txnIndex];
+        const accIndex = userData.accounts.findIndex(a => a.id === txn.accId);
+        if (accIndex > -1) {
+            let currentBal = Number(userData.accounts[accIndex].balance);
+            if (txn.type === 'expense') { currentBal += Number(txn.amount); } else { currentBal -= Number(txn.amount); }
+            userData.accounts[accIndex].balance = currentBal;
+        }
+        userData.transactions.splice(txnIndex, 1);
+        saveData("İşlem silindi ve bakiye güncellendi.");
+    }
+
+    function addTxn() {
+        if(checkSpam()) return;
+        const accId=parseInt(document.getElementById('txnAccount').value); 
+        const amount=parseFloat(document.getElementById('txnAmount').value); 
+        const desc=document.getElementById('txnDesc').value; 
+        const cat=document.getElementById('txnCategory').value;
+        
+        if(!accId || isNaN(amount)) return showToast("Bilgi girin","error");
+        const acc = userData.accounts.find(a=>a.id===accId);
+        if(acc) { 
+            const type=document.getElementById('txnType').value; 
+            let cur = Number(acc.balance); if(type==='expense') cur-=amount; else cur+=amount; acc.balance=cur;
+            userData.transactions.unshift({
+                id: Date.now(), type, amount:amount, desc, category:cat, accId: acc.id, 
+                date:document.getElementById('txnDate').value
+            }); 
+            saveData("İşlem Eklendi"); document.getElementById('modal-add-txn').style.display='none'; 
+        } else {
+            showToast("Hesap bulunamadı!", "error");
+        }
+    }
+
+    function delAcc(id) { if(confirm("Sil?")) { userData.accounts = userData.accounts.filter(a=>a.id!==id); saveData("Silindi"); } }
+    function delTxn(id) { deleteTransaction(id); }
+
+    function saveData(m) { db.collection("users").doc(currentUser).update({accounts:userData.accounts, transactions:userData.transactions}).then(()=>{showToast(m,"success"); renderUI();}); }
+    function copyText(t) { if(!t) return; navigator.clipboard.writeText(t).then(()=>showToast("Kopyalandı","success")); }
+    
+    function openCardSettings(id) { const acc = userData.accounts.find(a=>a.id===id); document.getElementById('detailAccId').value=id; document.getElementById('realCardNum').value=acc.realCardNumber||""; document.getElementById('realCardDate').value=acc.expiry||""; document.getElementById('realCardCvv').value=acc.cvv||""; document.getElementById('modal-card-details').style.display='flex'; }
+    function saveCardDetails() { const id=parseInt(document.getElementById('detailAccId').value); const acc = userData.accounts.find(a=>a.id===id); acc.realCardNumber=document.getElementById('realCardNum').value; acc.expiry=document.getElementById('realCardDate').value; acc.cvv=document.getElementById('realCardCvv').value; saveData("Kaydedildi"); document.getElementById('modal-card-details').style.display='none'; }
+    function editAccount(id) { const acc=userData.accounts.find(a=>a.id===id); document.getElementById('editAccId').value=id; document.getElementById('editAccBalance').value=acc.balance; document.getElementById('modal-edit-acc').style.display='flex'; }
+    function saveEditedAccount() { const id=parseInt(document.getElementById('editAccId').value); const acc=userData.accounts.find(a=>a.id===id); acc.balance=parseFloat(document.getElementById('editAccBalance').value); saveData("Güncellendi"); document.getElementById('modal-edit-acc').style.display='none'; }
+    
+    function showStats() { document.getElementById('modal-stats').style.display='flex'; const txns = userData.transactions.filter(t=>t.type==='expense'); const total = txns.reduce((s,t)=>s+t.amount,0); const d = total/30; document.getElementById('stat-d').innerText = Math.round(d); document.getElementById('stat-m').innerText = Math.round(total); }
+    let chartInstance=null;
+    function renderChart() { 
+        const ctx = document.getElementById('myChart').getContext('2d'); 
+        if(chartInstance) chartInstance.destroy(); 
+        const expenses = userData.transactions.filter(t=>t.type==='expense');
+        const cats = {}; expenses.forEach(t=>{ cats[t.category] = (cats[t.category]||0)+t.amount; });
+        const labels = Object.keys(cats).map(c=>c.toUpperCase()); const data = Object.values(cats);
+        const colors = ['#4f46e5','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899'];
+        chartInstance = new Chart(ctx, { type: 'doughnut', data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: {size: 10} } } } } });
+    }
+    function refreshAdmin() { const l = document.getElementById('admin-list'); l.innerHTML="Yükleniyor..."; db.collection("users").get().then(s=>{ l.innerHTML=""; s.forEach(d=>{ l.innerHTML+=`<div class="list-item"><span>${d.id}</span><button class="btn-icon-sm" style="border-color:red; color:red;" onclick="delUser('${d.id}')">🗑️</button></div>`; }); }); }
+    function delUser(id) { if(confirm("Sil?")) db.collection("users").doc(id).delete().then(()=>refreshAdmin()); }
+    function toggleTheme() { if(document.body.getAttribute('data-theme')==='light') document.body.removeAttribute('data-theme'); else document.body.setAttribute('data-theme','light'); }
+    function changePassword() { const n=document.getElementById('newPass').value; if(n.length>5) db.collection("users").doc(currentUser).update({password:n}).then(()=>showToast("Şifre Değişti","success")); }
+    function changeUsername() { const n=document.getElementById('newUsername').value.trim(); if(!n) return; db.collection("users").doc(n).get().then(doc=>{ if(doc.exists) showToast("Dolu","error"); else { db.collection("users").doc(n).set(userData).then(()=>{ db.collection("users").doc(currentUser).delete().then(()=>{ location.reload(); }); }); } }); }
+</script>
+</body>
+</html>

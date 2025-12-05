@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hamza Kaya | Kişisel Web Sitesi</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- RENK PALETİ: MONOCHROME + GRI --- */
+        :root {
+            --bg: #0a0a0a;
+            --card-bg: #1f1f1f;
+            --text-main: #f0f0f0;
+            --text-muted: #999999;
+            --accent: #d4d4d4;     /* Gümüş Gri */
+            --border: #333333;
+            --button-text: #000000;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        /* --- HEADER --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 10%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+            text-decoration: none;
+            border: 2px solid var(--text-muted);
+            padding: 8px 15px;
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+
+        .logo:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 0.9rem;
+            transition: 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent);
+        }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            padding: 6rem 10%;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 60vh;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            line-height: 1.1;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #ffffff, #666666);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin-bottom: 30px;
+        }
+
+        /* --- BUTONLAR İÇİN ORTAK STİL (EŞİTLEME) --- */
+        .btn-common {
+            display: inline-flex;       
+            align-items: center;        
+            justify-content: center;    
+            gap: 10px;                  
+            padding: 0 25px;            
+            height: 50px;               /* SABİT YÜKSEKLİK */
+            min-width: 220px;           /* EŞİT GENİŞLİK */
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* Hero'daki 'Beni Tanı' butonu (Çerçeveli) */
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--text-muted);
+            color: var(--text-main);
+            height: auto; 
+            padding: 12px 30px;
+        }
+        .btn-outline:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Mail Kopyalama Butonu (Gümüş Dolu) */
+        .btn-primary {
+            background: var(--accent);
+            color: var(--button-text);
+        }
+        .btn-primary:hover {
+            background: #ffffff;
+            transform: translateY(-2px);
+        }
+
+        /* LinkedIn Butonu (Mavi Dolu) */
+        .btn-linkedin {
+            background: #0e76a8;
+            color: white;
+        }
+        .btn-linkedin:hover {
+            background: #0b5c82;
+            transform: translateY(-2px);
+        }
+
+        /* --- BÖLÜMLER --- */
+        section {
+            padding: 4rem 10%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid var(--text-muted);
+            padding-left: 15px;
+            display: inline-block;
+            color: var(--text-main);
+        }
+
+        /* --- HAKKIMDA --- */
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+
+        .skill-tag {
+            display: inline-block;
+            background: var(--card-bg);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            color: var(--accent);
+            transition: 0.3s;
+        }
+        
+        .skill-tag:hover {
+            border-color: var(--accent);
+            background: #333;
+        }
+
+        /* --- PROJELER --- */
+        .projects-grid {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .project-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            transition: 0.3s;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .project-card:hover {
+            border-color: var(--accent);
+            background: #252525;
+            transform: translateY(-5px);
+        }
+
+        .project-card h3 {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            color: var(--text-main);
+        }
+
+        .project-card p {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .project-link {
+            font-size: 0.9rem;
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 1px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .project-link:hover {
+            gap: 10px;
+            border-bottom-color: var(--accent);
+            transition: 0.3s;
+        }
+
+        /* --- İLETİŞİM ALANI & FOOTER --- */
+        .contact-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 30px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 50px;
+        }
+
+        /* --- TOAST NOTIFICATION --- */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--accent);
+            font-weight: bold;
+            text-align: center;
+            border-radius: 4px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            font-size: 1rem;
+            transform: translateX(-50%);
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.5);
+        }
+
+        #toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        @keyframes fadein {
+            from {bottom: 0; opacity: 0;}
+            to {bottom: 30px; opacity: 1;}
+        }
+
+        @keyframes fadeout {
+            from {bottom: 30px; opacity: 1;}
+            to {bottom: 0; opacity: 0;}
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2.5rem; }
+            .about-grid { grid-template-columns: 1fr; }
+            header { padding: 1.5rem 5%; }
+            section { padding: 3rem 5%; }
+            .btn-common { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <a href="#" class="logo">Hamza Kaya</a>
+        <nav>
+            <a href="#hakkimda">Hakkımda</a>
+            <a href="#projeler">Projeler</a>
+            <a href="#iletisim">İletişim</a>
+        </nav>
+    </header>
+
+    <div class="hero">
+        <h1>Modern.<br>Yalın.<br>Geliştirici.</h1>
+        <p>Merhaba, ben Hamza Kaya. İskenderun Teknik Üniversitesi YBS 1. sınıf öğrencisiyim. İstanbul'da yaşıyorum ve yazılım teknolojileri üzerine yoğunlaşıyorum.</p>
+        <div>
+            <a href="#hakkimda" class="btn-common btn-outline">Beni Tanı</a>
+        </div>
+    </div>
+
+    <section id="hakkimda">
+        <h2 class="section-title">Hakkımda</h2>
+        <div class="about-grid">
+            <div>
+                <p style="color:var(--text-muted); margin-bottom:20px;">
+                    28 Ocak 2006, İstanbul doğumluyum. Yönetim Bilişim Sistemleri (YBS) bölümünde akademik eğitimime devam ederken, <strong>yazılım dünyasının dinamiklerine hakim olmak adına algoritmik düşünce ve modern geliştirme yöntemleri</strong> üzerine kendimi geliştiriyorum.
+                </p>
+                <p style="color:var(--text-muted);">
+                    Karmaşıklıktan uzak, verimli ve ölçeklenebilir sistemler tasarlamayı hedefliyorum. Veri yapıları ve yazılım mimarisi şu anki ana odak noktam.
+                </p>
+            </div>
+            <div>
+                <span class="skill-tag">Yazılım Geliştirme</span>
+                <span class="skill-tag">C++</span>
+                <span class="skill-tag">Algoritma</span>
+                <span class="skill-tag">Veri Yapıları</span>
+                <span class="skill-tag">Problem Çözme</span>
+                <span class="skill-tag">Matematik</span>
+            </div>
+        </div>
+    </section>
+
+    <section id="projeler">
+        <h2 class="section-title">Projelerim</h2>
+        <div class="projects-grid">
+            
+            <div class="project-card">
+                <h3>MyWallet</h3>
+                <p>Gelir ve giderlerin takip edilebildiği, hesap bakiyelerinin yönetildiği kişisel cüzdan projesi.</p>
+                <a href="projeler/myWallet/index.html" class="project-link">Projeye Git <i class="fas fa-arrow-right"></i></a>
+            </div>
+
+        </div>
+    </section>
+
+    <section id="iletisim" style="text-align: center; padding-top:2rem;">
+        <h2 style="font-size:2rem; margin-bottom:1rem;">İletişime Geç</h2>
+        <p style="color:var(--text-muted); margin-bottom:30px;">
+            Projeler ve iş birlikleri için bana ulaşabilirsiniz.
+        </p>
+        
+        <div class="contact-buttons">
+            <button onclick="copyEmail()" class="btn-common btn-primary">
+                <i class="fas fa-envelope"></i> Mail Adresini Kopyala
+            </button>
+            
+            <a href="https://www.linkedin.com/in/hamza-kaya-b77779389/" class="btn-common btn-linkedin" target="_blank">
+                <i class="fab fa-linkedin"></i> LinkedIn
+            </a>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 Hamza Kaya.</p>
+        <div style="margin-top:10px; opacity: 0.6; font-size: 0.8rem;">
+            İstanbul • İSTE YBS
+        </div>
+    </footer>
+
+    <div id="toast">Mail adresi kopyalandı!</div>
+
+    <script>
+        function copyEmail() {
+            const email = "hamzaybs0@gmail.com";
+            navigator.clipboard.writeText(email).then(() => {
+                var x = document.getElementById("toast");
+                x.className = "show";
+                setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+            }).catch(err => {
+                console.error('Kopyalama başarısız: ', err);
+            });
+        }
+    </script>
+
+</body>
+</html>
